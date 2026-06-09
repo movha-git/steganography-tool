@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Steganography Tool</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0d1117;
+  color: #cdd9e5;
+  min-height: 100vh;
+  padding: 30px 16px;
+}
+.container { max-width:680px; margin:0 auto; }
+h1 { color:#58a6ff; font-size:1.8rem; text-align:center; margin-bottom:6px; }
+.subtitle { color:#8b949e; text-align:center; margin-bottom:16px; }
+#serverStatus {
+  text-align:center;
+  padding:8px 16px;
+  border-radius:20px;
+  font-size:13px;
+  font-weight:600;
+  margin-bottom:24px;
+  display:inline-block;
+  width:100%;
+}
+.tabs { display:flex; gap:12px; margin-bottom:20px; }
+.tab {
+  flex:1; padding:12px;
+  border:1px solid #30363d;
+  border-radius:8px;
+  background:#161b22;
+  color:#8b949e;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+}
+.tab.active { background:#1f6feb; color:white; border-color:#1f6feb; }
+.card {
+  background:#161b22;
+  border:1px solid #30363d;
+  border-radius:12px;
+  padding:24px;
+  margin-bottom:20px;
+}
+.card h2 { color:#79c0ff; font-size:1rem; margin-bottom:16px; }
+label {
+  display:block;
+  color:#79c0ff;
+  font-size:13px;
+  font-weight:600;
+  margin-bottom:8px;
+  margin-top:14px;
+}
+input[type="file"] {
+  width:100%;
+  padding:10px;
+  background:#0d1117;
+  border:2px dashed #30363d;
+  border-radius:8px;
+  color:#cdd9e5;
+  font-size:13px;
+  cursor:pointer;
+  margin-bottom:8px;
+}
+input[type="file"]:hover { border-color:#58a6ff; }
+img.preview {
+  width:100%;
+  max-height:200px;
+  object-fit:contain;
+  border-radius:8px;
+  border:1px solid #30363d;
+  background:#0d1117;
+  margin-bottom:12px;
+  display:none;
+}
+textarea {
+  width:100%;
+  padding:12px;
+  background:#0d1117;
+  border:1px solid #30363d;
+  border-radius:8px;
+  color:#cdd9e5;
+  font-size:14px;
+  resize:vertical;
+  font-family:inherit;
+}
+textarea:focus { outline:none; border-color:#58a6ff; }
+.charcount { color:#8b949e; font-size:12px; text-align:right; margin:4px 0 12px; }
+.btn-green {
+  width:100%; padding:13px;
+  background:#238636; color:white;
+  border:none; border-radius:8px;
+  font-size:15px; font-weight:600;
+  cursor:pointer; margin-top:8px;
+}
+.btn-green:hover { background:#2ea043; }
+.btn-blue {
+  width:100%; padding:13px;
+  background:#1f6feb; color:white;
+  border:none; border-radius:8px;
+  font-size:15px; font-weight:600;
+  cursor:pointer; margin-top:16px;
+}
+.btn-blue:hover { background:#388bfd; }
+.loading {
+  display:none;
+  text-align:center;
+  color:#8b949e;
+  padding:12px;
+  background:#21262d;
+  border-radius:8px;
+  margin-top:12px;
+  font-size:14px;
+}
+.result {
+  display:none;
+  padding:16px;
+  border-radius:8px;
+  margin-top:14px;
+  font-size:14px;
+  line-height:1.6;
+}
+.success { background:#0d2a14; border:1px solid #3fb950; color:#3fb950; }
+.error   { background:#2d0e0a; border:1px solid #f85149; color:#f85149; }
+.info    { background:#0d1f38; border:1px solid #58a6ff; color:#cdd9e5; }
+.btn-download {
+  display:inline-block;
+  margin-top:12px;
+  padding:10px 20px;
+  background:#238636;
+  color:white;
+  border:none;
+  border-radius:8px;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  text-decoration:none;
+}
+.how-it-works { border-color:#21262d; }
+.how-it-works h3 { color:#79c0ff; margin-bottom:10px; }
+.how-it-works p  { color:#8b949e; font-size:13px; line-height:1.7; margin-bottom:6px; }
+.hl { color:#f0883e; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🕵️ Steganography Tool</h1>
+  <p class="subtitle">Hide secret messages inside images — or extract them</p>
+  <div id="serverStatus" style="background:#21262d;color:#8b949e;">
+    ⏳ Checking server connection...
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabHide"    onclick="switchTab('hide')">🔒 Hide Message</button>
+    <button class="tab"        id="tabExtract" onclick="switchTab('extract')">🔓 Extract Message</button>
+  </div>
+
+  <!-- HIDE SECTION -->
+  <div class="card" id="hideSection">
+    <h2>Hide a Secret Message Inside an Image</h2>
+
+    <label>Step 1 — Upload any image (JPG, PNG, BMP)</label>
+    <input type="file" id="hideImageInput" accept="image/*"
+           onchange="previewImg(this,'hidePreview')"/>
+    <img id="hidePreview" class="preview"/>
+
+    <label>Step 2 — Type your secret message</label>
+    <textarea id="hideMessage" rows="4"
+              placeholder="Type anything here..."
+              oninput="document.getElementById('cc').textContent=this.value.length+' characters'">
+    </textarea>
+    <div class="charcount" id="cc">0 characters</div>
+
+    <button class="btn-green" onclick="doHide()">🔒 Hide Message in Image</button>
+    <div class="loading" id="hideLoading">⏳ Hiding your message, please wait...</div>
+    <div class="result"  id="hideResult"></div>
+  </div>
+
+  <!-- EXTRACT SECTION -->
+  <div class="card" id="extractSection" style="display:none;">
+    <h2>Extract a Hidden Message from an Image</h2>
+
+    <label>Upload the image that contains a hidden message</label>
+    <input type="file" id="extractImageInput" accept="image/*"
+           onchange="previewImg(this,'extractPreview')"/>
+    <img id="extractPreview" class="preview"/>
+
+    <button class="btn-blue" onclick="doExtract()">🔓 Extract Hidden Message</button>
+    <div class="loading" id="extractLoading">⏳ Scanning image for hidden messages...</div>
+    <div class="result"  id="extractResult"></div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="card how-it-works">
+    <h3>⚙️ How LSB Steganography Works</h3>
+    <p>Every pixel has 3 colour values: <strong>Red, Green, Blue</strong> (each 0–255).</p>
+    <p>In binary, 255 = <strong>1111111<span class="hl">1</span></strong>.
+       The last bit (LSB) barely changes the colour at all.</p>
+    <p>We replace that last bit with bits from your secret message.
+       The image looks <strong>completely identical</strong> to the human eye —
+       but your message is hidden inside every pixel.</p>
+  </div>
+
+</div>
+<script>
+const SERVER = 'http://127.0.0.1:5002';
+
+// Check server on load
+window.addEventListener('load', async () => {
+  const s = document.getElementById('serverStatus');
+  try {
+    const r = await fetch(SERVER + '/ping');
+    const d = await r.json();
+    if (d.status) {
+      s.textContent  = '✅ Server connected and running';
+      s.style.background = '#0d2a14';
+      s.style.color      = '#3fb950';
+      s.style.border     = '1px solid #3fb950';
+    }
+  } catch {
+    s.textContent  = '❌ Server offline — run: python app.py in the terminal';
+    s.style.background = '#2d0e0a';
+    s.style.color      = '#f85149';
+    s.style.border     = '1px solid #f85149';
+  }
+});
+
+// Switch tabs
+function switchTab(tab) {
+  document.getElementById('hideSection').style.display    = tab==='hide'    ? 'block' : 'none';
+  document.getElementById('extractSection').style.display = tab==='extract' ? 'block' : 'none';
+  document.getElementById('tabHide').classList.toggle('active',    tab==='hide');
+  document.getElementById('tabExtract').classList.toggle('active', tab==='extract');
+}
+
+// Preview image
+function previewImg(input, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const img = document.getElementById(previewId);
+  const reader = new FileReader();
+  reader.onload = e => { img.src = e.target.result; img.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
+// HIDE message
+async function doHide() {
+  const imgFile = document.getElementById('hideImageInput').files[0];
+  const message = document.getElementById('hideMessage').value.trim();
+  const loading = document.getElementById('hideLoading');
+  const result  = document.getElementById('hideResult');
+
+  result.style.display  = 'none';
+  loading.style.display = 'none';
+
+  if (!imgFile) { showResult(result,'⚠️ Please upload an image first.','error'); return; }
+  if (!message) { showResult(result,'⚠️ Please type a secret message.','error'); return; }
+
+  loading.style.display = 'block';
+
+  try {
+    const fd = new FormData();
+    fd.append('image',   imgFile);
+    fd.append('message', message);
+
+    const res  = await fetch(SERVER + '/encode', { method:'POST', body:fd });
+    const data = await res.json();
+    loading.style.display = 'none';
+
+    if (res.ok && data.success) {
+      result.className    = 'result success';
+      result.style.display = 'block';
+      result.innerHTML    = `
+        ✅ <strong>Message hidden successfully!</strong><br><br>
+        The image looks identical but your secret message is now encoded inside it.<br><br>
+        <a class="btn-download"
+           href="${SERVER}/download/${data.download}"
+           target="_blank">
+          ⬇️ Download Image with Hidden Message
+        </a>
+      `;
+    } else {
+      showResult(result, '❌ ' + (data.error || 'Encoding failed.'), 'error');
+    }
+  } catch(e) {
+    loading.style.display = 'none';
+    showResult(result, '❌ Server error: ' + e.message, 'error');
+  }
+}
+
+// EXTRACT message
+async function doExtract() {
+  const imgFile = document.getElementById('extractImageInput').files[0];
+  const loading = document.getElementById('extractLoading');
+  const result  = document.getElementById('extractResult');
+
+  result.style.display  = 'none';
+  loading.style.display = 'none';
+
+  if (!imgFile) { showResult(result,'⚠️ Please upload an image first.','error'); return; }
+
+  loading.style.display = 'block';
+
+  try {
+    const fd = new FormData();
+    fd.append('image', imgFile);
+
+    const res  = await fetch(SERVER + '/decode', { method:'POST', body:fd });
+    const data = await res.json();
+    loading.style.display = 'none';
+
+    if (res.ok && data.success) {
+      result.className    = 'result info';
+      result.style.display = 'block';
+      result.innerHTML    = `
+        🔓 <strong>Hidden Message Found:</strong><br><br>
+        <div style="background:#0d1117;padding:14px;border-radius:8px;
+                    font-family:monospace;color:#79c0ff;
+                    word-break:break-all;font-size:15px;margin-top:6px;">
+          ${data.hidden_message}
+        </div>
+      `;
+    } else {
+      showResult(result, '❌ ' + (data.error || 'No hidden message found.'), 'error');
+    }
+  } catch(e) {
+    loading.style.display = 'none';
+    showResult(result, '❌ Server error: ' + e.message, 'error');
+  }
+}
+
+// Helper
+function showResult(box, msg, type) {
+  box.className    = 'result ' + type;
+  box.style.display = 'block';
+  box.textContent  = msg;
+}
+</script>
+</body>
+</html>
